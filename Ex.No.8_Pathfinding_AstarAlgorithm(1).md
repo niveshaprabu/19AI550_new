@@ -1,6 +1,6 @@
-# Ex.No: 8  Implementation of Path finding using A* algorithm
-### DATE:                                                                            
-### REGISTER NUMBER : 
+# Ex.No: 8  Implementation of Path finding using A* algorithm                                                                      
+### REGISTER NUMBER :  212222040108
+## NAME :  NIVESHA P
 ### AIM: 
 To write a program to create graph using waypoints and use A* algorithm to find path between source and destination.
 ### Algorithm:
@@ -18,131 +18,142 @@ To write a program to create graph using waypoints and use A* algorithm to find 
 ### Program:
 ```
 **#1.Waypoint.cs**
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
 
-public class Waypoint : MonoBehaviour {
+public class Waypoint : MonoBehaviour
+{
     public List<Waypoint> neighbors = new List<Waypoint>();
 
-    // Optional: Draw connections in the editor
-    private void OnDrawGizmos() {
-        Gizmos.color = Color.yellow;
-        foreach (var neighbor in neighbors) {
-            if (neighbor != null) {
+    private void OnDrawGizmos()
+    {
+        Gizmos.color = Color.red;
+        foreach (Waypoint neighbor in neighbors)
+        {
+            if (neighbor != null)
                 Gizmos.DrawLine(transform.position, neighbor.transform.position);
-            }
         }
     }
 }
-**#2. WaypointGraph.cs**
-using UnityEngine;
-
-public class WaypointGraph : MonoBehaviour {
-    public Waypoint[] allWaypoints;
-
-    void Awake() {
-        allWaypoints = FindObjectsOfType<Waypoint>();
-    }
-}
-**#3.Pathfinding.cs**
+**#2. Waypointmanager.cs**
 using System.Collections.Generic;
 using UnityEngine;
-public class Pathfinding : MonoBehaviour {
-    public static List<Waypoint> FindPath(Waypoint start, Waypoint goal) {
-        var openSet = new List<Waypoint>();
-        var cameFrom = new Dictionary<Waypoint, Waypoint>();
-        var gScore = new Dictionary<Waypoint, float>();
-        var fScore = new Dictionary<Waypoint, float>();
 
-        foreach (var wp in FindObjectsOfType<Waypoint>()) {
-            gScore[wp] = float.PositiveInfinity;
-            fScore[wp] = float.PositiveInfinity;
+public class WaypointManager : MonoBehaviour
+{
+    public List<Waypoint> waypoints = new List<Waypoint>();
+
+    public List<Waypoint> FindPath(Waypoint start, Waypoint end)
+    {
+        List<Waypoint> openSet = new List<Waypoint> { start };
+        HashSet<Waypoint> closedSet = new HashSet<Waypoint>();
+        Dictionary<Waypoint, Waypoint> cameFrom = new Dictionary<Waypoint, Waypoint>();
+
+        Dictionary<Waypoint, float> gScore = new Dictionary<Waypoint, float>();
+        Dictionary<Waypoint, float> fScore = new Dictionary<Waypoint, float>();
+
+        foreach (Waypoint wp in waypoints)
+        {
+            gScore[wp] = float.MaxValue;
+            fScore[wp] = float.MaxValue;
         }
 
-        gScore[start] = 0f;
-        fScore[start] = Vector3.Distance(start.transform.position, goal.transform.position);
-        openSet.Add(start);
+        gScore[start] = 0;
+        fScore[start] = Vector3.Distance(start.transform.position, end.transform.position);
 
-        while (openSet.Count > 0) {
+        while (openSet.Count > 0)
+        {
             Waypoint current = openSet[0];
-            foreach (var wp in openSet) {
-                if (fScore[wp] < fScore[current]) {
-                    current = wp;
-                }
-            }
+            foreach (Waypoint w in openSet)
+                if (fScore[w] < fScore[current]) current = w;
 
-            if (current == goal) {
-                return ReconstructPath(cameFrom, current);
+            if (current == end)
+            {
+                List<Waypoint> path = new List<Waypoint>();
+                while (cameFrom.ContainsKey(current))
+                {
+                    path.Add(current);
+                    current = cameFrom[current];
+                }
+                path.Add(start);
+                path.Reverse();
+                return path;
             }
 
             openSet.Remove(current);
+            closedSet.Add(current);
 
-            foreach (var neighbor in current.neighbors) {
+            foreach (Waypoint neighbor in current.neighbors)
+            {
+                if (closedSet.Contains(neighbor)) continue;
+
                 float tentativeG = gScore[current] + Vector3.Distance(current.transform.position, neighbor.transform.position);
-                if (tentativeG < gScore[neighbor]) {
-                    cameFrom[neighbor] = current;
-                    gScore[neighbor] = tentativeG;
-                    fScore[neighbor] = tentativeG + Vector3.Distance(neighbor.transform.position, goal.transform.position);
+                if (!openSet.Contains(neighbor)) openSet.Add(neighbor);
+                else if (tentativeG >= gScore[neighbor]) continue;
 
-                    if (!openSet.Contains(neighbor)) {
-                        openSet.Add(neighbor);
-                    }
-                }
+                cameFrom[neighbor] = current;
+                gScore[neighbor] = tentativeG;
+                fScore[neighbor] = gScore[neighbor] + Vector3.Distance(neighbor.transform.position, end.transform.position);
             }
         }
 
-        return null; // No path found
-    }
-
-    private static List<Waypoint> ReconstructPath(Dictionary<Waypoint, Waypoint> cameFrom, Waypoint current) {
-        var path = new List<Waypoint> { current };
-        while (cameFrom.ContainsKey(current)) {
-            current = cameFrom[current];
-            path.Insert(0, current);
-        }
-        return path;
+        return null;
     }
 }
 
-**#4.AICharacter.cs**
-using UnityEngine;
+**#3.playermover.cs**
+using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
-public class AICharacter : MonoBehaviour {
-    public Waypoint startWaypoint;
-    public Waypoint goalWaypoint;
+public class PlayerMover : MonoBehaviour
+{
+    public Waypoint start;
+    public Waypoint end;
+    public WaypointManager manager;
     public float speed = 3f;
-
     private List<Waypoint> path;
-    private int currentIndex = 0;
+    private int index = 0;
 
-    void Start() {
-        path = Pathfinding.FindPath(startWaypoint, goalWaypoint);
+    void Start()
+    {
+        path = manager.FindPath(start, end);
+        if (path != null && path.Count > 0)
+            StartCoroutine(FollowPath());
     }
 
-    void Update() {
-        if (path == null || currentIndex >= path.Count) return;
-
-        Vector3 target = path[currentIndex].transform.position;
-        transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
-
-        if (Vector3.Distance(transform.position, target) < 0.1f) {
-            currentIndex++;
+    IEnumerator FollowPath()
+    {
+        while (index < path.Count)
+        {
+            Vector3 target = path[index].transform.position;
+            while (Vector3.Distance(transform.position, target) > 0.1f)
+            {
+                transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
+                yield return null;
+            }
+            index++;
+            yield return null;
         }
     }
 }
+```
+
 Check the following
 1. Waypoints placed in scene
 2. Neighbors set manually via Inspector
 3. WaypointGraph script on a manager
 4. AICharacter assigned a start and goal
-### Output:
+
+## Output:
+### Initial player position:
+<img width="453" alt="430963554-bbc659bd-74dd-4d4a-9a00-a485f621b193" src="https://github.com/user-attachments/assets/6035f2e1-c299-4c47-a0d2-0fa3df656de2" />
 
 
 
 
-
-
+### After pathfinding player position:
+<img width="454" alt="430963828-d13173ad-ade8-45d8-af15-0f14feb81608" src="https://github.com/user-attachments/assets/df92c489-4aac-48dc-aeb3-a1a178a07bfa" />
 
 
 
