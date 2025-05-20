@@ -1,6 +1,6 @@
 # Ex.No: 9  Implementation of Simple Reinforcement Learning 
-### DATE:                                                                            
-### REGISTER NUMBER : 
+### Name : NIVESHA P                                                                      
+### Reg NO : 212222040108
 ### AIM: 
 To write a program to implement  Reinforcement learning  in Unity 
 ### Algorithm:
@@ -108,6 +108,7 @@ behaviors:
 ### Output:
 
 
+![WhatsApp Image 2025-05-19 at 13 25 53_86d1d8ad](https://github.com/user-attachments/assets/29438ed2-fb57-49f8-9f30-dd6d66e10fc0)
 
 
 
